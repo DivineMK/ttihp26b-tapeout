@@ -1,8 +1,38 @@
 ![](../../workflows/gds/badge.svg) ![](../../workflows/docs/badge.svg) ![](../../workflows/test/badge.svg) ![](../../workflows/fpga/badge.svg)
 
-# Tiny Tapeout Verilog Project Template
+# TinyQV SoC (Dual Memory Backend)
 
-- [Read the documentation for project](docs/info.md)
+TinyQV RV32EC microcontroller with two memory backends
+selected by a reset strap (`ui_in[0]`): Quad-SPI Flash/PSRAM via a QSPI
+PMOD, or single-SPI RAM emulated on the RP2040 (`spi-ram-emu`, 23LC512
+protocol). 64 MHz system clock, 3x2 tile.
+
+- [Read the project datasheet](docs/info.md) — how it works, pinout,
+  address map, external hardware, and post-tapeout bring-up tasks.
+
+## Status
+
+- RTL sim: 2/2 cocotb tests pass at 64 MHz (`cd test && make clean && make`)
+- Functional gate-level sim: 2/2 pass on the hardened netlist (`GATES=yes make`)
+- Hardened with LibreLane 3.0.5 (IHP SG13G2): LVS/DRC/antenna clean,
+  +3.02 ns setup / +0.11 ns hold slack, no violations across 3 corners
+- Timed SDF sim is experimental only (`GATES=yes SDF=1 make`) — icarus
+  cannot fully parse the OpenSTA SDF, so STA remains the timing signoff
+
+Built on upstream [TinyQV](https://github.com/TinyTapeout/ttsky25a-tinyQV)
+by Michael Bell.
+- **Reused**: CPU core (`cpu/core.v`, `cpu/cpu.v`,
+  `cpu/decode.v`, `cpu/alu.v`, `cpu/register.v`, `cpu/counter.v`), the
+  QSPI controller (`cpu/qspi_ctrl.v`), and the UART transmitter
+  (`peri/uart/uart_tx.v`)
+- **Modified**: `cpu/mem_ctrl.v` (instantiates both memory backends and
+  multiplexes them on the strap), `tinyqv.v` (plumbs the strap through)
+- **New**: `src/cpu/spi_mem_ctrl.v` (single-SPI 23LC512 master for
+  `spi-ram-emu`: command/address framing, 16-bit address windowing,
+  48-cycle CS cooldown), `src/project.v` (Tiny Tapeout top: strap
+  sampling, PMOD pin mapping, GPIO/UART peripherals), and the testbench
+  (`test/test.py` SPI-emu + QSPI bus models and boot tests,
+  `test/tb_sdf.v` timed-sim variant)
 
 ## What is Tiny Tapeout?
 
